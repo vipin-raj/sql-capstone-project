@@ -1,0 +1,228 @@
+Please answer the following questions using Airline DB database. 
+Instruction to attempt questions:
+•	Students need to write queries for the questions mentioned in the using Airline DB database
+•	Read the questions carefully before writing the query in Airline Playground (in the Playground chapter of SQL)
+•	Airline DB: https://www.skillovilla.com/playground/sql?exerciseId=0181e251-6ea8-4595-ae2b-0c690119f8db
+How to submit the capstone:
+•	Copy the SQL query code and paste it in the answer section in this file.
+•	Once the assignment is done, submit the file over LMS.
+Invalid Submissions:
+•	Pasting pictures of the code as answer is NOT acceptable.
+•	Uploading output data (CSVs) of the SQL queries is NOT acceptable.
+
+Write your answers(query) in the answer and submit it. To write the answer in the assignment, please follow the below example in yellow
+Example:
+Questions: Extract all the columns of the flights table
+Answer: SELECT * FROM flights
+
+                                                           Attempt the following Questions-
+
+
+1.	Represent the “book_date” column in “yyyy-mmm-dd” format using Bookings table 
+Expected output: book_ref, book_date (in “yyyy-mmm-dd” format) , total amount 
+Answer: SELECT book_ref, to_char(book_date, 'yyyy-mmm-dd') book_date, total_amount FROM bookings
+
+2.	Get the following columns in the exact same sequence.
+Expected columns in the output: ticket_no, boarding_no, seat_number, passenger_id, passenger_name.
+Answer: SELECT b.ticket_no, b.boarding_no, b.seat_no, t.passenger_id, t.passenger_name FROM boarding_passes b INNER JOIN tickets t ON b.ticket_no = t.ticket_no
+
+3.	Write a query to find the seat number which is least allocated among all the seats?
+
+Answer: WITH allocation_table as (SELECT seat_no, count(ticket_no) ticket_number FROM boarding_passes GROUP BY 1),
+allocation_rank_table as (SELECT *, RANK() OVER(ORDER BY ticket_number ASC) seat_rank FROM allocation_table)
+
+SELECT seat_no FROM allocation_rank_table WHERE seat_rank = 1
+
+4.	In the database, identify the month wise highest paying passenger name and passenger id.
+Expected output: Month_name(“mmm-yy” format), passenger_id, passenger_name and total amount
+
+
+Answer:  WITH table1 as (SELECT b.book_ref, TO_CHAR(b.book_date, 'mmm-yy') month_name, b.total_amount, t.passenger_id, t.passenger_name FROM Bookings b INNER JOIN Tickets t ON b.book_ref = t.book_ref),
+ranked_table as (SELECT *, dense_rank() OVER(PARTITION BY month_name ORDER BY total_amount DESC) passenger_rank FROM table1)
+
+SELECT month_name, passenger_id, passenger_name, total_amount FROM ranked_table WHERE passenger_rank = 1
+
+
+5.	In the database, identify the month wise least paying passenger name and passenger id?
+Expected output: Month_name(“mmm-yy” format), passenger_id, passenger_name and total amount
+
+Answer: WITH table1 as (SELECT b.book_ref, TO_CHAR(b.book_date, 'mmm-yy') month_name, b.total_amount, t.passenger_id, t.passenger_name FROM Bookings b INNER JOIN Tickets t ON b.book_ref = t.book_ref),
+ranked_table as (SELECT *, dense_rank() OVER(PARTITION BY month_name ORDER BY total_amount ASC) passenger_rank FROM table1)
+
+SELECT month_name, passenger_id, passenger_name, total_amount FROM ranked_table WHERE passenger_rank = 1
+
+6.	Identify the travel details of non stop journeys  or return journeys (having more than 1 flight).
+Expected Output: Passenger_id, passenger_name, ticket_number and flight count.
+
+Answer:  SELECT t.passenger_id, t.passenger_name, t.ticket_no, COUNT(b.flight_id) flight_count FROM tickets t INNER JOIN boarding_passes b ON t.ticket_no = b.ticket_no GROUP BY 1,2,3 HAVING COUNT(flight_id) > 1
+
+7.	How many tickets are there without boarding passes?
+Expected Output: just one number is required.
+
+Answer: SELECT COUNT(*) FROM tickets t FULL OUTER JOIN boarding_passes b ON t.ticket_no = b.ticket_no WHERE b.boarding_no IS NULL
+
+
+8.	Identify details of the longest flight (using flights table)?
+Expected Output: Flight number, departure airport, arrival airport, aircraft code and durations.
+
+Answer: With table1 as (SELECT flight_no, departure_airport, arrival_airport, aircraft_code, (scheduled_arrival-scheduled_departure) duration FROM flights), 
+ranked_table as (SELECT *, RANK() OVER(ORDER BY duration desc) duration_rank FROM table1)
+
+SELECT flight_no, departure_airport, arrival_airport, aircraft_code, duration FROM ranked_table where duration_rank = 1
+
+
+
+9.	Identify details of all the morning flights (morning means between 6AM to 11 AM, using flights table)?
+Expected output: flight_id, flight_number, scheduled_departure, scheduled_arrival and timings.
+
+Answer: SELECT flight_id, flight_no, scheduled_departure, scheduled_arrival, to_char(scheduled_departure,'HH:MI:SS AM') timings FROM flights WHERE EXTRACT(HOUR FROM scheduled_departure) BETWEEN 6 AND 11
+
+
+
+10.	Identify the earliest morning flight available from every airport.
+Expected output: flight_id, flight_number, scheduled_departure, scheduled_arrival, departure airport and timings.
+Answer:  WITH table1 as ( SELECT flight_id, flight_no, scheduled_departure, scheduled_arrival, departure_airport, to_char(scheduled_departure,'HH:MI:SS AM') timings FROM flights WHERE EXTRACT(HOUR FROM scheduled_departure) BETWEEN 6 AND 11),
+ranked_table as (SELECT *, DENSE_RANK() OVER( PARTITION BY departure_airport ORDER BY timings ASC) flight_rank FROM table1)
+
+SELECT flight_id, flight_no, scheduled_departure, scheduled_arrival, departure_airport, timings FROM ranked_table WHERE flight_rank = 1
+
+11.	Questions: Find list of airport codes in Europe/Moscow timezone
+ Expected Output:  Airport_code. 
+
+Answer: SELECT airport_code FROM airports WHERE timezone = 'Europe/Moscow'
+
+12.	Write a query to get the count of seats in various fare condition for every aircraft code?
+ Expected Outputs: Aircraft_code, fare_conditions ,seat count
+
+Answer: SELECT aircraft_code, fare_conditions, COUNT(seat_no) AS seat_count FROM seats GROUP BY 1,2
+
+13.	How many aircrafts codes have at least one Business class seats?
+ Expected Output : Count of aircraft codes
+
+Answer: WITH details_table AS (SELECT aircraft_code, fare_conditions, COUNT(seat_no) AS seat_count FROM seats GROUP BY 1,2 HAVING (COUNT(seat_no) >=1 and fare_conditions = 'Business'))
+
+SELECT COUNT(*) count_of_aircraft_codes FROM details_table
+
+14.	Find out the name of the airport having maximum number of departure flight
+ Expected Output : Airport_name 
+
+Answer:  WITH joined_table AS (SELECT f.departure_airport, f.flight_id, f.aircraft_code, a.airport_name FROM Flights f INNER JOIN Airports a ON f.departure_airport = a.airport_code),
+flight_count_table AS (SELECT airport_name, COUNT(flight_id) flight_count from joined_table group by 1),
+ranked_table AS (SELECT  *, RANK() OVER(ORDER BY flight_count DESC) flight_rank FROM flight_count_table)
+
+SELECT airport_name FROM ranked_table WHERE flight_rank = 1
+
+15.	Find out the name of the airport having least number of scheduled departure flights
+ Expected Output : Airport_name 
+
+Answer: WITH joined_table AS (SELECT f.departure_airport, f.flight_id, f.aircraft_code, a.airport_name FROM Flights f INNER JOIN Airports a ON f.departure_airport = a.airport_code),
+flight_count_table AS (SELECT airport_name, COUNT(flight_id) flight_count from joined_table group by 1),
+ranked_table AS (SELECT  *, RANK() OVER(ORDER BY flight_count ASC) flight_rank FROM flight_count_table)
+
+SELECT airport_name FROM ranked_table WHERE flight_rank = 1
+
+16.	How many flights from ‘DME’ airport don’t have actual departure?
+ Expected Output : Flight Count 
+
+Answer: SELECT COUNT(*) flight_count FROM FLIGHTS WHERE departure_airport = 'DME' AND actual_departure IS NULL
+
+17.	Identify flight ids having range between 3000 to 6000
+ Expected Output : Flight_Number , aircraft_code, ranges 
+
+Answer: SELECT f.flight_id, f.flight_no, a.aircraft_code, a.range FROM Flights f INNER JOIN Aircrafts a ON f.aircraft_code = a.aircraft_code WHERE a.range BETWEEN 3000 AND 6000
+
+
+18.	Write a query to get the count of flights flying between URS and KUF?
+ Expected Output : Flight_count
+
+Answer: SELECT COUNT(*) flight_count FROM Flights WHERE departure_airport IN ('URS','KUF') AND arrival_airport IN ('URS','KUF')
+
+
+19.	Write a query to get the count of flights flying from either from NOZ or KRR?
+ Expected Output : Flight count 
+
+Answer: SELECT COUNT(*) flight_count FROM Flights WHERE departure_airport IN ('NOZ','KRR')
+
+
+20.	Write a query to get the count of flights flying from KZN,DME,NBC,NJC,GDX,SGC,VKO,ROV
+Expected Output : Departure airport ,count of flights flying from these   airports.
+
+Answer: SELECT departure_airport, COUNT(flight_id) flight_count FROM Flights  WHERE departure_airport IN ('KZN','DME','NBC','NJC','GDX','SGC','VKO','ROV') GROUP BY 1
+
+
+21.	Write a query to extract flight details having range between 3000 and 6000 and flying from DME
+Expected Output :Flight_no,aircraft_code,range,departure_airport
+
+Answer:  SELECT f.flight_no, a.aircraft_code, a.range, f.departure_airport FROM Flights f INNER JOIN Aircrafts a ON f.aircraft_code = a.aircraft_code WHERE (a.range BETWEEN 3000 AND 6000) AND departure_airport = 'DME'
+
+22.	Find the list of flight ids which are using aircrafts from “Airbus” company and got cancelled or delayed
+ Expected Output : Flight_id,aircraft_model
+
+Answer: SELECT f.flight_id, a.model aircraft_model FROM Flights f INNER JOIN Aircrafts a ON f.aircraft_code = a.aircraft_code WHERE lower(f.status) IN ('cancelled','delayed') AND lower(a.model) LIKE '%airbus%'
+
+
+23.	Find the list of flight ids which are using aircrafts from “Boeing” company and got cancelled or delayed
+Expected Output : Flight_id,aircraft_model
+
+Answer: SELECT f.flight_id, a.model aircraft_model FROM Flights f INNER JOIN Aircrafts a ON f.aircraft_code = a.aircraft_code WHERE lower(f.status) IN ('cancelled','delayed') AND lower(a.model) LIKE '%boeing%'
+
+
+24.	Which airport(name) has most cancelled flights (arriving)?
+Expected Output : Airport_name 
+
+Answer: WITH joined_table AS (SELECT a.airport_name, COUNT(f.flight_id) flight_count FROM Airports a INNER JOIN Flights f ON a.airport_code = f.arrival_airport WHERE f.status = 'Cancelled' GROUP BY 1),
+ranked_table AS (SELECT *, RANK() OVER(ORDER BY flight_count desc) flight_rank FROM joined_table)
+
+SELECT airport_name FROM ranked_table WHERE flight_rank = 1
+
+
+25.	Identify flight ids which are using “Airbus aircrafts”
+Expected Output : Flight_id,aircraft_model
+
+Answer: SELECT f.flight_id, a.model FROM Flights f INNER JOIN Aircrafts a ON f.aircraft_code = a.aircraft_code WHERE a.model like '%Airbus%'
+
+
+26.	Identify date-wise last flight id flying from every airport?
+Expected Output: Flight_id,flight_number,schedule_departure,departure_airport
+
+Answer:  WITH ranked_table AS (SELECT flight_id, flight_no, scheduled_departure, departure_airport, RANK() OVER(PARTITION BY departure_airport ORDER BY scheduled_departure DESC) flight_rank FROM Flights)
+
+SELECT flight_id, flight_no, scheduled_departure, departure_airport FROM ranked_table WHERE flight_rank = 1
+
+
+27.	Identify list of customers who will get the refund due to cancellation of the flights and how much amount they will get?
+Expected Output : Passenger_name,total_refund.
+
+Answer: 
+SELECT
+ t.passenger_name,
+ b.total_amount total_refund
+FROM Bookings b
+INNER JOIN Tickets t 
+ON b.book_ref = t.book_ref 
+INNER JOIN Ticket_flights tf 
+ON t.ticket_no = tf.ticket_no
+INNER JOIN Flights f 
+ON tf.flight_id = f.flight_id
+WHERE f.status = 'Cancelled'
+
+
+28.	Identify date wise first cancelled flight id flying for every airport?
+Expected Output : Flight_id,flight_number,schedule_departure,departure_airport
+
+Answer:  WITH ranked_table AS (SELECT flight_id, flight_no, scheduled_departure, departure_airport, RANK() OVER(PARTITION BY arrival_airport ORDER BY scheduled_departure ASC) flight_rank FROM Flights WHERE status = 'Cancelled')
+
+SELECT flight_id, flight_no, scheduled_departure, departure_airport FROM ranked_table WHERE flight_rank = 1
+
+29.	Identify list of Airbus flight ids which got cancelled.
+Expected Output : Flight_id
+
+Answer: SELECT f.flight_id FROM Flights f INNER JOIN Aircrafts a ON f.aircraft_code = a.aircraft_code WHERE  f.status = 'Cancelled' and a.model LIKE '%Airbus%'
+
+30.	Identify list of flight ids having highest range.
+ Expected Output : Flight_no, range
+
+
+Answer: WITH ranked_table AS (SELECT f.flight_id, f.flight_no, a.range, RANK() OVER(ORDER BY a.range desc) range_rank FROM Flights f INNER JOIN Aircrafts a ON f.aircraft_code = a.aircraft_code)
+
+Select flight_no, range from ranked_table where range_rank = 1
